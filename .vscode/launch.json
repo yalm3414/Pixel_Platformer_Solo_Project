@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run PixelPlatformer",
+      "request": "launch",
+      "mainClass": "PixelPlatformer",
+      "cwd": "${workspaceFolder}/bin"
+    }
+  ]
+}

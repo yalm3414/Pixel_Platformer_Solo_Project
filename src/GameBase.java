@@ -1,15 +1,13 @@
-import java.applet.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 
-public abstract class GameBase extends Applet implements Runnable, KeyListener, MouseListener, MouseMotionListener
+public abstract class GameBase extends JPanel implements KeyListener, MouseListener, MouseMotionListener
 {
-	Image     off_screen;
-	Graphics  off_screen_g;
-
-	
 	static boolean[] pressing = new boolean[1024];
-	
 		
 	public static final int UP 			= KeyEvent.VK_UP;
 	public static final int DN 			= KeyEvent.VK_DOWN;
@@ -83,99 +81,118 @@ public abstract class GameBase extends Applet implements Runnable, KeyListener, 
 	int mx;
 	int my;
 	
-	
-	Thread t;
-	
 
-	
-	public final void run()
-	{
-		
-//		musicPlayer.playMusic("../Music/Background_Theme.wav");
-		while(true)
-		{
-			inGameLoop();
-			
-			// Update the Screen
-			
-			repaint();
-			
-			try
-			{
-				Thread.sleep(16);
-			}
-			catch(Exception x) {};
-		}
-
-	}
-	
 	public abstract void inGameLoop();
-	
-	
-	public final void update(Graphics g)
-	{
-		off_screen_g.clearRect(0, 0, 815, 415);
-		paint(off_screen_g);
-		
-		// 2. Get the current size of the Applet/Window
-	    int winW = getWidth();
-	    int winH = getHeight();
-	    
-	    // 3. Paint the actual screen black first (these will be your letterbox bars)
-	    g.setColor(Color.BLACK);
-	    g.fillRect(0, 0, winW, winH);
-	    
-	    // 4. Calculate aspect ratios
-	    double targetRatio = 830.0 / 415.0; // Your native resolution
-	    double windowRatio = (double) winW / winH;
-	    
-	    int drawW = winW;
-	    int drawH = winH;
-	    int drawX = 0;
-	    int drawY = 0;
-	    
-	    // 5. Determine how to scale and center the image
-	    if (windowRatio > targetRatio) {
-	        // Window is too wide. Fit to height, center horizontally.
-	        drawW = (int) (winH * targetRatio);
-	        drawX = (winW - drawW) / 2;
-	    } else {
-	        // Window is too tall. Fit to width, center vertically.
-	        drawH = (int) (winW / targetRatio);
-	        drawY = (winH - drawH) / 2;
-	    }
-	    
-	    // 6. Draw the buffer to the screen, scaled and centered perfectly!
-	    g.drawImage(off_screen, drawX, drawY, drawW, drawH, null);		
-	}
-	
 	
 	public abstract void initialize();
 	
-	public final void init()
-	{
-		
-		off_screen   = createImage(830, 415);
-		off_screen_g = off_screen.getGraphics();
-			
-		
-		requestFocus();
-		
-		addKeyListener(this);
-		
-		addMouseListener(this);
-		addMouseMotionListener(this);
-		
-		initialize();
-		
-		t = new Thread(this);
-		
-		t.start();
+	protected abstract void drawGame(Graphics g);
+
+	private void renderFrame() {
+		Graphics2D g = frameImage.createGraphics();
+
+		try {
+			g.setColor(Color.BLACK);
+			g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+			drawGame(g);
+		} finally {
+			g.dispose();
+		}
 	}
 	
+	@Override
+	protected final void paintComponent(Graphics g) {
+		super.paintComponent(g);
+
+		int width = getWidth();
+		int height = getHeight();
+
+		if (width <= 0 || height <= 0) {
+			return;
+		}
+
+		double scale = Math.min(
+			width / (double) GAME_WIDTH,
+			height / (double) GAME_HEIGHT
+		);
+
+		int drawWidth = (int) (GAME_WIDTH * scale);
+		int drawHeight = (int) (GAME_HEIGHT * scale);
+
+		int x = (width - drawWidth) / 2;
+		int y = (height - drawHeight) / 2;
+
+		Graphics2D screen = (Graphics2D) g.create();
+
+		try {
+			screen.setRenderingHint(
+				RenderingHints.KEY_INTERPOLATION,
+				RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+			);
+
+			screen.drawImage(
+				frameImage, x, y, drawWidth, drawHeight, this
+			);
+		} finally {
+			screen.dispose();
+		}
+	}
+	public static final int GAME_WIDTH = 830;
+	public static final int GAME_HEIGHT = 415;
+
+	private final BufferedImage frameImage =
+		new BufferedImage(
+			GAME_WIDTH, GAME_HEIGHT, BufferedImage.TYPE_INT_RGB
+		);
+
+	private final Timer timer;
+	private boolean initialized;
+
+	public GameBase() {
+		setPreferredSize(new Dimension(GAME_WIDTH, GAME_HEIGHT));
+		setBackground(Color.BLACK);
+		setFocusable(true);
+
+		addKeyListener(this);
+		addMouseListener(this);
+		addMouseMotionListener(this);
+
+		addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+				Arrays.fill(pressing, false);
+			}
+		});
+
+		timer = new Timer(16, e -> {
+			inGameLoop();
+			renderFrame();
+			repaint();
+		});
+	}
+
+	public final void startGame() {
+		if (!initialized) {
+			initialize();
+			renderFrame();
+			initialized = true;
+		}
+
+		timer.start();
+	}
+
+	public final void stopGame() {
+		timer.stop();
+		Arrays.fill(pressing, false);
+	}
+	
+
+	public void mousePressed (MouseEvent e){
+		requestFocusInWindow();
+	}
+
 	public void mouseMoved   (MouseEvent e){}
 	public void mouseDragged (MouseEvent e){}
-	public void mousePressed (MouseEvent e){}
 	public void mouseReleased(MouseEvent e){}
 	public void mouseClicked (MouseEvent e){}
 	public void mouseEntered (MouseEvent e){}

@@ -1,10 +1,37 @@
-import java.applet.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
 public class PixelPlatformer extends GameBase
 {	
 
+	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
+			PixelPlatformer game = new PixelPlatformer();
+
+			JFrame window = new JFrame("Pixel Platformer");
+			window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			window.setContentPane(game);
+			window.pack();
+			window.setLocationRelativeTo(null);
+
+			window.addWindowListener(new WindowAdapter() {
+				@Override
+				public void windowClosing(WindowEvent e) {
+					game.stopGame();
+				}
+			});
+
+			window.setVisible(true);
+			game.startGame();
+
+			SwingUtilities.invokeLater(
+				() -> game.requestFocusInWindow()
+			);
+		});
+	}
 	
 	//TileMap map = new TileMap("tilemap2.map", 16, 16);
 	
@@ -33,13 +60,9 @@ public class PixelPlatformer extends GameBase
 	}
 	
 	
-	
-	public void paint(Graphics g)
-	{	
-		
-	
+	@Override
+	protected void drawGame(Graphics g) {
 		Level.current.draw(g);
-		
 	}
 	
 	

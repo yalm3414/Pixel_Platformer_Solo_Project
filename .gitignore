@@ -1,0 +1,6 @@
+# Generated Java build output
+/bin/
+*.class
+
+# Local JDK installation
+/oracleJdk-21/
